@@ -303,4 +303,75 @@ td.conf { color: #666; font-size: 0.78rem; font-family: monospace; }
 </p>
 
 <script>
-(funct
+(function () {
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth();
+  const todayD = now.getDate();
+  const todayNorm = new Date(todayY, todayM, todayD);
+
+  // -- 1. Dynamic "today" ring on calendar grid --
+  document.querySelectorAll('.day.today').forEach(el => el.classList.remove('today'));
+  const monthMap = {
+    January:0,February:1,March:2,April:3,May:4,June:5,
+    July:6,August:7,September:8,October:9,November:10,December:11
+  };
+  document.querySelectorAll('.month-card').forEach(card => {
+    const parts = card.querySelector('.month-name').textContent.trim().split(' ');
+    if (monthMap[parts[0]] === todayM && parseInt(parts[1]) === todayY) {
+      card.querySelectorAll('.day:not(.empty)').forEach(dayEl => {
+        const n = dayEl.querySelector('.day-num');
+        if (n && parseInt(n.textContent) === todayD) dayEl.classList.add('today');
+      });
+    }
+  });
+
+  // -- 2. Hide past flight rows (and section headers when all legs are past) --
+  function parseFlightDate(str) {
+    const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    const parts = str.trim().split(' ');
+    const m = months[parts[0]];
+    const d = parseInt(parts[1]);
+    if (m === undefined || isNaN(d)) return null;
+    return new Date(todayY, m, d);
+  }
+
+  document.querySelectorAll('.flights-table table tbody').forEach(tbody => {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    let i = 0;
+    while (i < rows.length) {
+      const row = rows[i];
+      if (row.classList.contains('section-row')) {
+        let j = i + 1;
+        const legRows = [];
+        while (j < rows.length && !rows[j].classList.contains('section-row')) {
+          legRows.push(rows[j]);
+          j++;
+        }
+        const allPast = legRows.every(r => {
+          const dm = r.querySelector('.date-main');
+          if (!dm) return true;
+          const d = parseFlightDate(dm.textContent);
+          return d ? d < todayNorm : true;
+        });
+        if (allPast) {
+          row.style.display = 'none';
+          legRows.forEach(r => r.style.display = 'none');
+        } else {
+          legRows.forEach(r => {
+            const dm = r.querySelector('.date-main');
+            if (!dm) return;
+            const d = parseFlightDate(dm.textContent);
+            if (d && d < todayNorm) r.style.display = 'none';
+          });
+        }
+        i = j;
+      } else {
+        i++;
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
