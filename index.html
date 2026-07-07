@@ -353,7 +353,16 @@ td.conf { color: #666; font-size: 0.78rem; font-family: monospace; }
   };
   document.querySelectorAll('.month-card').forEach(card => {
     const parts = card.querySelector('.month-name').textContent.trim().split(' ');
-    if (monthMap[parts[0]] === todayM && parseInt(parts[1]) === todayY) {
+    const cardM = monthMap[parts[0]];
+    const cardY = parseInt(parts[1]);
+
+    // Hide month cards that are entirely in the past
+    if (cardY < todayY || (cardY === todayY && cardM < todayM)) {
+      card.style.display = 'none';
+      return;
+    }
+
+    if (cardM === todayM && cardY === todayY) {
       card.querySelectorAll('.day:not(.empty)').forEach(dayEl => {
         const n = dayEl.querySelector('.day-num');
         if (n && parseInt(n.textContent) === todayD) dayEl.classList.add('today');
@@ -383,19 +392,21 @@ td.conf { color: #666; font-size: 0.78rem; font-family: monospace; }
           legRows.push(rows[j]);
           j++;
         }
-        const legDates = legRows.map(r => {
-          const cell = r.querySelector('.date-cell .date-main');
-          return cell ? parseFlightDate(cell.textContent) : null;
+        const allPast = legRows.every(r => {
+          const dm = r.querySelector('.date-main');
+          if (!dm) return true;
+          const d = parseFlightDate(dm.textContent);
+          return d ? d < todayNorm : true;
         });
-        const allPast = legDates.length > 0 && legDates.every(d => d && d < todayNorm);
         if (allPast) {
           row.style.display = 'none';
           legRows.forEach(r => r.style.display = 'none');
         } else {
-          legRows.forEach((row2, idx) => {
-            const d = legDates[idx];
-            if (d && d < todayNorm) row2.style.display = 'none';
-            else row2.style.display = '';
+          legRows.forEach(r => {
+            const dm = r.querySelector('.date-main');
+            if (!dm) return;
+            const d = parseFlightDate(dm.textContent);
+            if (d && d < todayNorm) r.style.display = 'none';
           });
         }
         i = j;
